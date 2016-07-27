@@ -1,0 +1,357 @@
+<!-- https://github.com/BlackrockDigital/startbootstrap-simple-sidebar -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Example</title>
+    <script src="http://code.jquery.com/jquery-2.0.0.js" type= "text/javascript">
+    </script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <script type="text/javascript">
+
+
+    $(function() {
+      var ACCESS_TOKEN = '{{.Value}}'
+      var MESSAGE_CMD_MESSAGE = 1;
+      var MESSAGE_CMD_LEAVE   = 2;
+      var MESSAGE_CMD_CLOSE   = 3;
+      var creationTime;
+      var hostname = window.location.hostname;
+      var url = "ws://" + hostname + ":8080/ws";
+      var conn;
+      var msg = $("#msg");
+      var room = getURLParameter('room') != null ? getURLParameter('room') : 'default';
+
+      // var user_id = getURLParameter('user_id') != null ? parseInt(getURLParameter('user_id')) : 1;
+
+      function init(){
+        $("#menu-toggle").click(function(e) {
+          e.preventDefault();
+          $("#wrapper").toggleClass("toggled");
+        });
+
+        $('#form .row:first').css({width: $(document).width() - $('#sidebar-wrapper').width() + 5 + 'px'});
+
+        // $(window).resize(function() {
+        //   $('#form .row:first').css({width: $(document).width() - $('#sidebar-wrapper').width() + 5 + 'px'});
+        // }
+
+        $('#room-list li').not(':first').bind('click', function() {
+          setActiveRoom($(this).attr('id').split('-')[1]);
+        });
+        // $('#room-list li#room-' + room).addClass('active')
+        $(document).on('scrollToBottom', function(){
+          $('html, body')[0].scrollTop = $(document).height();
+        });
+      }
+
+
+      function appendLog(data) {
+        var roomEle = $('#room-log-' + data.room);
+        // var doScroll = roomEle.scrollTop == roomEle.scrollHeight - roomEle.clientHeight;
+        $('<div class="media"><div class="media-left"><a href="#" title="' + data.name + '"><img src="' + data.picture +'"/></a></div><div class="media-body">' + data.message + '</div></div>').appendTo(roomEle);
+        // if (doScroll) {
+        //   roomEle.scrollTop = roomEle.scrollHeight - roomEle.clientHeight;
+        // }
+        // $('html, body').stop(true, true).animate({scrollTop:$(document).height()}, 0);
+      }
+
+      function getURLParameter(name) {
+        return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [null, ''])[1].replace(/\+/g, '%20')) || null;
+      }
+
+      function setActiveRoom(newRoom) {
+
+        $('.room-log-wrapper .room').removeClass('active');
+        $('.room-log-wrapper #room-log-'+ newRoom).addClass('active');
+        $('#room-list li').removeClass('active');
+        $('#room-list li#room-' + newRoom).addClass('active');
+        room = newRoom;
+        // $(document).trigger('scrollToBottom');
+        // $('html, body')[0].scrollTop = $(document).height();
+        $('html, body').stop(true, true).animate({scrollTop:$(document).height()}, '100');
+      }
+
+      $("#form").submit(function() {
+        if (!conn) {
+          return false;
+        }
+        if (!msg.val()) {
+          return false;
+        }
+        message = buildMessage(msg.val(), MESSAGE_CMD_MESSAGE);
+        conn.send(message);
+        msg.val("");
+        return false;
+      });
+
+      function onMessage(event) {
+        data = JSON.parse(event.data);
+          console.log(data);
+          appendLog(data);
+          setActiveRoom(data.room);
+      }
+      function reconnect() {
+        setTimeout(function() {
+          $.get('/reconnect', {access_token: ACCESS_TOKEN}, function(data){
+            console.log(data);
+            if (data['success']) {
+              connectWs();
+            } else {
+              reconnect();
+            }
+          }).fail(function() {
+            console.log('Fail to connect to server');
+            reconnect();
+          });
+        }, 5000);
+      }
+
+      function connectWs() {
+        creationTime = $.now();
+        if (window["WebSocket"]) {
+          conn = new WebSocket(url + "?room=" + room + "&creation_time=" + creationTime + "&access_token=" + ACCESS_TOKEN);
+
+          conn.onclose = function(event){
+            reconnect();
+          }
+
+          conn.onmessage = function(event) {
+            onMessage(event);
+          }
+        } else {
+          alert("Your browser does not support WebSockets.");
+        }
+      }
+
+      function buildMessage(message, cmd) {
+        return JSON.stringify({room: room, message: message, cmd: cmd, timestamp: $.now()});
+      }
+      function buildCloseMessage(message, cmd) {
+        return JSON.stringify({room: room, message: message, cmd: cmd, timestamp: $.now(), creation_time: creation_time});
+      }
+
+      init();
+      connectWs();
+
+    });
+    </script>
+    <style type="text/css">
+    #wrapper {
+      padding-left: 0;
+      -webkit-transition: all 0.5s ease;
+      -moz-transition: all 0.5s ease;
+      -o-transition: all 0.5s ease;
+      transition: all 0.5s ease;
+    }
+
+    #wrapper.toggled {
+      padding-left: 250px;
+    }
+
+    #sidebar-wrapper {
+      z-index: 1000;
+      position: fixed;
+      left: 250px;
+      width: 0;
+      height: 100%;
+      margin-left: -250px;
+      overflow-y: auto;
+      background: #000;
+      -webkit-transition: all 0.5s ease;
+      -moz-transition: all 0.5s ease;
+      -o-transition: all 0.5s ease;
+      transition: all 0.5s ease;
+    }
+
+    #wrapper.toggled #sidebar-wrapper {
+        width: 250px;
+    }
+
+    #page-content-wrapper {
+      width: 100%;
+      position: absolute;
+      padding: 15px;
+      padding-left: 0px;
+    }
+
+    #wrapper.toggled #page-content-wrapper {
+      position: absolute;
+      margin-right: -250px;
+    }
+
+    #form .row:first-child {
+      float: right;
+    }
+
+    /* Sidebar Styles */
+
+    .sidebar-nav {
+      position: absolute;
+      top: 0;
+      width: 250px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sidebar-nav li {
+      text-indent: 20px;
+      line-height: 40px;
+    }
+
+    .sidebar-nav li a {
+      display: block;
+      text-decoration: none;
+      color: #999999;
+    }
+
+    .sidebar-nav li a:hover {
+      text-decoration: none;
+      color: #fff;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .sidebar-nav li a:active,
+    .sidebar-nav li a:focus {
+      text-decoration: none;
+    }
+
+    .sidebar-nav > .sidebar-brand {
+      height: 65px;
+      font-size: 18px;
+      line-height: 60px;
+    }
+
+    .sidebar-nav > .sidebar-brand a {
+      color: #999999;
+    }
+
+    .sidebar-nav > .sidebar-brand a:hover {
+      color: #fff;
+      background: none;
+    }
+
+    @media(min-width:768px) {
+      #wrapper {
+          padding-left: 250px;
+      }
+
+      #wrapper.toggled {
+          padding-left: 0;
+      }
+
+      #sidebar-wrapper {
+          width: 250px;
+      }
+
+      #wrapper.toggled #sidebar-wrapper {
+          width: 0;
+      }
+
+      #page-content-wrapper {
+          padding: 20px;
+          padding-left: 0px;
+          position: relative;
+      }
+
+      #wrapper.toggled #page-content-wrapper {
+          position: relative;
+          margin-right: 0;
+      }
+    }
+
+    .room-log-wrapper {
+      padding-bottom: 50px;
+    }
+
+    .footer {
+      background-color: #f5f5f5;
+      bottom: 0;
+      height: 60px;
+      position: fixed;
+      width: 100%;
+    }
+
+    #form {
+      padding: 0 0.5em 0 0.5em;
+      margin: 0;
+      position: absolute;
+      bottom: 1em;
+      left: 0px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .room-log-wrapper .room {
+      display: none;
+    }
+    .room-log-wrapper .room.active {
+      display: block;
+    }
+    .room-log-wrapper .media img {
+      height: 30px;
+      width: 30px;
+      border-radius: 30px;
+    }
+    #room-list li.active {
+      background-color: #424242;
+    }
+
+    </style>
+</head>
+<body>
+  <div id="wrapper">
+      <!-- Sidebar -->
+      <div id="sidebar-wrapper">
+          <ul class="sidebar-nav" id="room-list">
+              <li class="sidebar-brand">
+                  <a href="#">Rooms</a>
+              </li>
+              <li id="room-default">
+                  <a href="#">Default</a>
+              </li>
+              <li id="room-18plus">
+                  <a href="#">Chat Siếc</a>
+              </li>
+              <li id="room-hentai">
+                  <a href="#">Chat hen-cái-mà-tai</a>
+              </li>
+          </ul>
+      </div>
+      <!-- /#sidebar-wrapper -->
+
+      <!-- Page Content -->
+      <div id="page-content-wrapper">
+          <div class="container-fluid">
+              <div class="row room-log-wrapper">
+                  <div class="col-lg-12 room" id="room-log-default">
+                    <!-- <a id="menu-toggle" class="btn btn-default" href="#menu-toggle">Toggle Menu</a> -->
+                  </div>
+                  <div class="col-lg-12 room" id="room-log-18plus"></div>
+                  <div class="col-lg-12 room" id="room-log-hentai"></div>
+              </div>
+          </div>
+      </div>
+      <!-- /#page-content-wrapper -->
+
+  </div>
+  <footer class="footer">
+    <div class="container">
+      <form id="form" name="form">
+        <div class="row">
+          <div class="col-lg-12">
+            <div class="input-group">
+              <input type="text" size="64" id="msg" placeholder="Message..." class="form-control">
+              <span class="input-group-btn">
+                  <input type="submit" value="Send" class="btn btn-primary">
+              </span>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </footer>
+</body>
+</html>

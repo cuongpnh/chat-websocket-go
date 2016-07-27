@@ -1,0 +1,9 @@
+<seelog type="sync" minlevel="trace">
+  <outputs formatid="main">
+    <rollingfile type="size" filename="./app.log" maxsize="5000000" maxrolls="5" />
+    <console />
+  </outputs>
+  <formats>
+    <format id="main" format="%l %Date(2006/01/02 15:04:05.000000000) %File:%Line %Msg%n"/>
+  </formats>
+</seelog>
