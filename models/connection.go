@@ -11,7 +11,6 @@ import (
 type Connection struct {
 	// Buffered channel of outbound messages.
 	Send         chan []byte
-	Room         string
 	Hub          *Hub
 	CreationTime int
 }
@@ -30,7 +29,7 @@ func (c *Connection) Reader(wg *sync.WaitGroup, wsConn *websocket.Conn, userId s
 		json_err := json.Unmarshal(message, &data)
 
 		if json_err != nil {
-			data = &IncommingMessage{Room: "", Message: "", UserId: "", Cmd: 0}
+			data = &IncommingMessage{Message: "", UserId: "", Cmd: 0}
 		}
 		data.UserId = userId
 		seelog.Infof("Read Message: %v, content: %v", time.Now().UnixNano(), data)
@@ -40,7 +39,7 @@ func (c *Connection) Reader(wg *sync.WaitGroup, wsConn *websocket.Conn, userId s
 
 func (c *Connection) Writer(wg *sync.WaitGroup, wsConn *websocket.Conn) {
 	for message := range c.Send {
-		seelog.Infof("Write Message: %v, content: %v", time.Now().UnixNano(), string(message))
+		seelog.Infof("Write Message for %p, at : %v, content: %v", c, time.Now().UnixNano(), string(message))
 		err := wsConn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
 			seelog.Infof("Cannot send message %s to %p, error: %s\n", string(message), c, err)

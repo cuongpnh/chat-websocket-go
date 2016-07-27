@@ -6,10 +6,15 @@ import (
 	"github.com/cihub/seelog"
 	"github.com/gorilla/sessions"
 	"go-in-5-minutes/episode4/models"
-	_ "go-in-5-minutes/episode4/utils"
+	"go-in-5-minutes/episode4/utils"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+)
+
+var (
+	sessionKey = utils.RandomString(32)
+	store      = sessions.NewCookieStore([]byte(sessionKey))
 )
 
 type BaseHandler struct {
@@ -25,9 +30,10 @@ func (this *BaseHandler) SetContext(context *sessions.CookieStore) {
 	this.Context = context
 }
 
-func NewHandler(handler Handler, context *sessions.CookieStore) http.HandlerFunc {
+func NewHandler(handler Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.SetContext(context)
+		seelog.Info("Set context")
+		handler.SetContext(store)
 		handler.Handle(w, r)
 	})
 }
@@ -74,15 +80,6 @@ func GetRoom(r *http.Request) string {
 
 func GetAccessToken(r *http.Request) string {
 	return r.URL.Query().Get("access_token")
-}
-
-func GetUserId(r *http.Request) int {
-	room := r.URL.Query().Get("user_id")
-	if len(room) == 0 {
-		room = "1"
-	}
-	roomInt, _ := strconv.Atoi(room)
-	return roomInt
 }
 
 func GetCreationTime(r *http.Request) int {

@@ -1,25 +1,16 @@
 package main
 
 import (
-	_ "fmt"
 	"github.com/cihub/seelog"
-	"github.com/gorilla/sessions"
 	"go-in-5-minutes/episode4/handlers"
 	"go-in-5-minutes/episode4/models"
-	"go-in-5-minutes/episode4/utils"
 	"net/http"
-)
-
-var (
-	sessionKey = utils.RandomString(32)
-	store      = sessions.NewCookieStore([]byte(sessionKey))
 )
 
 func main() {
 
 	defer seelog.Flush()
-	// logConfig := config.Get("LOG_CONFIG")
-	logConfig := "log_config.xml"
+	logConfig := "log_config.xml" // logConfig := os.Getenv("LOG_CONFIG"),
 	logger, err := seelog.LoggerFromConfigAsFile(logConfig)
 	if err != nil {
 		panic(err)
@@ -27,13 +18,14 @@ func main() {
 	seelog.ReplaceLogger(logger)
 
 	h := models.NewHub()
+
 	seelog.Infof("Hub: %p", h)
 	router := http.NewServeMux()
-	router.HandleFunc("/", handlers.NewHandler(&handlers.HomeHandler{}, store))
-	router.HandleFunc("/login", handlers.NewHandler(&handlers.LoginGoogleHandler{}, store))
-	router.HandleFunc("/callback", handlers.NewHandler(&handlers.LoginGoogleCallbackHandler{}, store))
-	router.HandleFunc("/reconnect", handlers.NewHandler(&handlers.ReconnectHandler{}, store))
-	router.Handle("/ws", &handlers.WsHandler{Hub: h, Context: store})
+	router.HandleFunc("/", handlers.NewHandler(&handlers.HomeHandler{}))
+	router.HandleFunc("/login", handlers.NewHandler(&handlers.LoginGoogleHandler{}))
+	router.HandleFunc("/callback", handlers.NewHandler(&handlers.LoginGoogleCallbackHandler{}))
+	router.HandleFunc("/reconnect", handlers.NewHandler(&handlers.ReconnectHandler{}))
+	router.HandleFunc("/ws", handlers.NewHandler(&handlers.WebSocketHandler{Hub: h}))
 	seelog.Info("Serving on port 8080")
 	seelog.Error(http.ListenAndServe(":8080", router))
 }

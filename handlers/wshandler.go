@@ -3,11 +3,9 @@ package handlers
 import (
 	_ "encoding/json"
 	"github.com/cihub/seelog"
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"go-in-5-minutes/episode4/models"
 	_ "io/ioutil"
-	"log"
 	"net/http"
 	"sync"
 )
@@ -16,22 +14,25 @@ var (
 	upgrader = &websocket.Upgrader{ReadBufferSize: 1024, WriteBufferSize: 1024}
 )
 
-type WsHandler struct {
-	Hub     *models.Hub
-	Context *sessions.CookieStore
+type WebSocketHandler struct {
+	BaseHandler
+	Hub *models.Hub
 }
 
-func (wsh WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (this *WebSocketHandler) SetHub(hub *models.Hub) {
+	this.Hub = hub
+}
+func (this *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
-	session, _ := wsh.Context.Get(r, "user")
+	session, _ := this.Context.Get(r, "user")
 	storedGPlusID := session.Values["gplusID"]
 	if storedGPlusID == nil {
-		log.Println("Gplus ID is nil")
+		seelog.Info("Gplus ID is nil for request %p", r)
 		return
 	}
 
 	wsConn, err := upgrader.Upgrade(w, r, nil)
-	seelog.Infof("Upgraded connection, %p\n", wsConn)
+	seelog.Infof("Upgraded connection, %p", wsConn)
 	if err != nil {
 		seelog.Infof("Error upgrading %s", err)
 		return
@@ -39,8 +40,7 @@ func (wsh WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	c := &models.Connection{
 		Send:         make(chan []byte, 256),
-		Hub:          wsh.Hub,
-		Room:         GetRoom(r),
+		Hub:          this.Hub,
 		CreationTime: GetCreationTime(r),
 	}
 
@@ -51,7 +51,7 @@ func (wsh WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			seelog.Infof("Cannot close socket %s", err)
 		}
-		seelog.Infof("Close connection now for %p\n", c)
+		seelog.Infof("Close connection now for %p", c)
 		c.Hub.RemoveConnection(uc)
 	}(uc)
 
@@ -60,5 +60,4 @@ func (wsh WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	go c.Reader(&wg, wsConn, storedGPlusID.(string))
 	go c.Writer(&wg, wsConn)
 	wg.Wait()
-
 }

@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+var (
+	supportedRooms = []string{"default", "18plus", "hentai"}
+)
+
 type Hub struct {
 	// the mutex to protect connections
 	connectionsMx sync.RWMutex
@@ -41,7 +45,7 @@ func NewHub() *Hub {
 	go func() {
 		for {
 			message := <-h.broadcast
-			seelog.Infof("%v", message)
+			seelog.Infof("Receive message at: %v, content: %v", time.Now().UnixNano(), message)
 			h.connectionsMx.RLock()
 
 			if _, ok := h.connections[message.Room]; !ok {
@@ -52,46 +56,50 @@ func NewHub() *Hub {
 				h.connectionsMx.RUnlock()
 				continue
 			}
-
-			user := h.users[message.UserId]
-
-			outgoingMessageObj := &OutgoingMessage{
-				Room:      message.Room,
-				Message:   message.Message,
-				UserId:    message.UserId,
-				Timestamp: message.Timestamp,
-				Name:      user.Name,
-				Picture:   user.Picture,
-				Email:     user.Email,
-			}
+			outgoingMessageObj := h.buildOutgoingMessage(message)
 			outgoingMessageJson, _ := json.Marshal(outgoingMessageObj)
-
+			var wg sync.WaitGroup
 			switch message.Cmd {
 			case constants.MESSAGE_CMD_MESSAGE:
 				for c := range h.connections[message.Room] {
-					// Use goroutine here
-					select {
-					case c.Connection.Send <- []byte(outgoingMessageJson):
-						seelog.Infof("Message for %p at %v", c, time.Now().UnixNano())
-					// stop trying to send to this connection after trying for 1 second.
-					// if we have to stop, it means that a reader died so remove the connection also.
-					case <-time.After(1 * time.Second):
-						seelog.Infof("Shutting down connection %s", c)
-						// Send signal to c.Send or any channel => connection
-						go h.RemoveConnection(c)
-					}
-				}
-			case constants.MESSAGE_CMD_CLOSE:
-				keyUserConnection := message.UserId + "_" + message.Room + "_" + strconv.Itoa(message.CreationTime)
-				userConnection := h.userConnections[keyUserConnection]
-				go h.RemoveConnection(userConnection)
-			case constants.MESSAGE_CMD_LEAVE:
-			}
+					// To prevent previous messages cannot arrive client before current message should use WaitGroup here
+					wg.Add(1)
+					go func(c *UserConnection) {
+						defer wg.Done()
+						select {
+						case c.Connection.Send <- []byte(outgoingMessageJson):
+							seelog.Infof("Message for %p at %v", c, time.Now().UnixNano())
+						// stop trying to send to this connection after trying for 1 second.
+						// if we have to stop, it means that a reader died so remove the connection also.
+						case <-time.After(1 * time.Second):
+							seelog.Infof("Shutting down connection %s", c)
+							// Send signal to c.Send or any channel => connection
+							go h.RemoveConnection(c)
+						}
+					}(c)
 
+				}
+				// Handler other cases here...
+			}
+			wg.Wait()
 			h.connectionsMx.RUnlock()
 		}
 	}()
 	return h
+}
+
+func (h *Hub) buildOutgoingMessage(message *IncommingMessage) *OutgoingMessage {
+	user := h.users[message.UserId]
+
+	return &OutgoingMessage{
+		Room:      message.Room,
+		Message:   message.Message,
+		UserId:    message.UserId,
+		Timestamp: message.Timestamp,
+		Name:      user.Name,
+		Picture:   user.Picture,
+		Email:     user.Email,
+	}
 }
 
 func (h *Hub) AddConnection(conn *Connection, session *sessions.Session) *UserConnection {
@@ -105,7 +113,7 @@ func (h *Hub) AddConnection(conn *Connection, session *sessions.Session) *UserCo
 
 	// New a User if current user is not exists
 	if _, ok := h.users[userId]; !ok {
-		seelog.Infof("User isn't exists %p, user: %v, room: %v", conn, userId, conn.Room)
+		seelog.Infof("User isn't exists %p, user: %v", conn, userId)
 		connections := make(map[*Connection]struct{})
 		h.users[userId] = &User{Connections: connections, Id: userId, Name: name, Picture: picture, Email: email}
 	}
@@ -113,30 +121,22 @@ func (h *Hub) AddConnection(conn *Connection, session *sessions.Session) *UserCo
 	h.users[userId].Connections[conn] = struct{}{}
 
 	// For testing purpose, we will add user to 3 rooms below
-	rooms := []string{"default", "18plus", "hentai"}
-	for _, room := range rooms {
+	for _, room := range supportedRooms {
 		if _, ok := h.connections[room]; !ok {
 			seelog.Infof("Room isn't exists %v", room)
 			h.connections[room] = make(map[*UserConnection]struct{})
 		}
 	}
 
-	// if _, ok := h.connections[conn.Room]; !ok {
-	// 	seelog.Infof("Room isn't exists %v", conn.Room)
-	// 	h.connections[conn.Room] = make(map[*UserConnection]struct{})
-	// }
-
 	// Add new user connection to connections list
 	userConnection := &UserConnection{conn, userId}
 	// seelog.Infof("Add connection: %p for user %v", conn, conn.Room)
-	for _, room := range rooms {
+	for _, room := range supportedRooms {
 		h.connections[room][userConnection] = struct{}{}
 		keyUserConnection := userId + "_" + room + "_" + strconv.Itoa(conn.CreationTime)
 		h.userConnections[keyUserConnection] = userConnection
 	}
-	// h.connections[conn.Room][userConnection] = struct{}{}
-	// keyUserConnection := strconv.Itoa(userId) + "_" + conn.Room
-	// h.userConnections[keyUserConnection] = userConnection
+
 	return userConnection
 }
 
@@ -149,15 +149,12 @@ func (h *Hub) RemoveConnection(uc *UserConnection) {
 
 	// Remove user's connection if it's exists
 	if _, ok := h.users[userId].Connections[conn]; ok {
-		rooms := []string{"default", "18plus", "hentai"}
-		for _, room := range rooms {
+
+		for _, room := range supportedRooms {
 			keyUserConnection := userId + "_" + room + "_" + strconv.Itoa(conn.CreationTime)
 			delete(h.connections[room], uc)
 			delete(h.userConnections, keyUserConnection)
 		}
-		// keyUserConnection := strconv.Itoa(userId) + "_" + conn.Room + "_" + strconv.Itoa(conn.CreationTime)
-		// delete(h.connections[conn.Room], uc)
-		// delete(h.userConnections, keyUserConnection)
 		delete(h.users[userId].Connections, conn)
 		close(conn.Send)
 

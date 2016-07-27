@@ -12,15 +12,25 @@
     <script type="text/javascript">
 
 
+    var ACCESS_TOKEN = '{{.Value}}'
+    var MESSAGE_CMD_MESSAGE = 1;
+    var MESSAGE_CMD_LEAVE   = 2;
+    var MESSAGE_CMD_CLOSE   = 3;
+    var creationTime;
+    var conn;
+
+    function performanceTest(n){
+      for(i = 0; i < n; i++) {
+        message = JSON.stringify({room: "default", message: "message: " + i, cmd: 1, timestamp: $.now()});
+        conn.send(message);
+      }
+    }
+
     $(function() {
-      var ACCESS_TOKEN = '{{.Value}}'
-      var MESSAGE_CMD_MESSAGE = 1;
-      var MESSAGE_CMD_LEAVE   = 2;
-      var MESSAGE_CMD_CLOSE   = 3;
-      var creationTime;
+
       var hostname = window.location.hostname;
       var url = "ws://" + hostname + ":8080/ws";
-      var conn;
+
       var msg = $("#msg");
       var room = getURLParameter('room') != null ? getURLParameter('room') : 'default';
 
@@ -112,7 +122,7 @@
       function connectWs() {
         creationTime = $.now();
         if (window["WebSocket"]) {
-          conn = new WebSocket(url + "?room=" + room + "&creation_time=" + creationTime + "&access_token=" + ACCESS_TOKEN);
+          conn = new WebSocket(url + "?creation_time=" + creationTime + "&access_token=" + ACCESS_TOKEN);
 
           conn.onclose = function(event){
             reconnect();
@@ -128,9 +138,6 @@
 
       function buildMessage(message, cmd) {
         return JSON.stringify({room: room, message: message, cmd: cmd, timestamp: $.now()});
-      }
-      function buildCloseMessage(message, cmd) {
-        return JSON.stringify({room: room, message: message, cmd: cmd, timestamp: $.now(), creation_time: creation_time});
       }
 
       init();

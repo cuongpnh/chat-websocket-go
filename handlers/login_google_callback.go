@@ -50,28 +50,4 @@ func (this *LoginGoogleCallbackHandler) Handle(w http.ResponseWriter, r *http.Re
 	}
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-	// response, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + accessToken)
-
-	// defer response.Body.Close()
-	// contents, err := ioutil.ReadAll(response.Body)
-	// if err != nil {
-	// 	log.Println("User is invalid")
-	// } else {
-	// 	data := &models.UserGoogle{}
-	// 	json_err := json.Unmarshal(contents, &data)
-
-	// 	if json_err != nil {
-	// 		seelog.Infof("Can not parse json to obj, %s", json_err)
-	// 	}
-	// 	seelog.Infof("%s", data)
-	// 	// Store user info
-	// 	session.Values["email"] = data.Email
-	// 	session.Values["picture"] = data.Picture
-	// 	session.Values["name"] = data.Name
-	// 	session.Values["gplusID"] = data.Id
-	// 	session.Save(r, w)
-
-	// 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-	// }
-
 }

@@ -34,26 +34,7 @@ func (this *ReconnectHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		w.Write(resultJs)
 		return
 	}
-	// response, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + accessToken)
-	// contents, err := ioutil.ReadAll(response.Body)
 
-	// if err != nil {
-	// 	w.Write(resultJs)
-	// 	return
-	// }
-	// data := &models.UserGoogle{}
-	// json_err := json.Unmarshal(contents, &data)
-
-	// if json_err != nil {
-	// 	w.Write(resultJs)
-	// 	return
-	// }
-	// if data.Id == "" {
-	// 	w.Write(resultJs)
-	// 	return
-	// }
-	// seelog.Infof("%s", data)
-	// Store user info
 	data.AccessToken = accessToken
 	this.UpdateUserSession(session, data, w, r)
 	seelog.Infof("Reconnect Access token: %v", accessToken)
