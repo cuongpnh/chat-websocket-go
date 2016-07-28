@@ -9,6 +9,10 @@
 			"Rev": "752ef646ce438bc649b2bb565188471879185c33"
 		},
 		{
+			"ImportPath": "github.com/fvbock/endless",
+			"Rev": "2cdc20a776897c0f406853c048c33e2c1a9f0ebf"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/proto",
 			"Rev": "0c1f6d65b5a189c2250d10e71a5506f06f9fa0a0"
 		},
