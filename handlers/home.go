@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"github.com/cihub/seelog"
-	"go-in-5-minutes/episode4/models"
 	"net/http"
 	"text/template"
+	"tracker/models"
 )
 
 type HomeHandler struct {

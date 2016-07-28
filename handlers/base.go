@@ -5,11 +5,11 @@ import (
 	"errors"
 	"github.com/cihub/seelog"
 	"github.com/gorilla/sessions"
-	"go-in-5-minutes/episode4/models"
-	"go-in-5-minutes/episode4/utils"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"tracker/models"
+	"tracker/utils"
 )
 
 var (
@@ -32,7 +32,6 @@ func (this *BaseHandler) SetContext(context *sessions.CookieStore) {
 
 func NewHandler(handler Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		seelog.Info("Set context")
 		handler.SetContext(store)
 		handler.Handle(w, r)
 	})

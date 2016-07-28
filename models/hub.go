@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"github.com/cihub/seelog"
 	"github.com/gorilla/sessions"
-	"go-in-5-minutes/episode4/constants"
 	"strconv"
 	"sync"
 	"time"
+	"tracker/constants"
 )
 
 var (
@@ -16,11 +16,11 @@ var (
 
 type Hub struct {
 	// the mutex to protect connections
-	connectionsMx sync.RWMutex
-	logMx         sync.RWMutex
+	// connectionsMx sync.RWMutex
+	sync.RWMutex
 
 	// Registered connections.
-	connections     map[string]map[*UserConnection]struct{} //[room][user_connection]
+	connections     map[string]map[*UserConnection]struct{}
 	userConnections map[string]*UserConnection
 	// We need a thing to hold all connections related to specific user and room, it will let us remove/close user's connection easier
 
@@ -28,14 +28,11 @@ type Hub struct {
 
 	// Inbound messages from the connections.
 	broadcast chan *IncommingMessage
-
-	log [][]byte
 }
 
 func NewHub() *Hub {
-	// users: make(map[int]*User)
 	h := &Hub{
-		connectionsMx:   sync.RWMutex{},
+		// connectionsMx:   sync.RWMutex{},
 		connections:     make(map[string]map[*UserConnection]struct{}),
 		userConnections: make(map[string]*UserConnection),
 		users:           make(map[string]*User),
@@ -46,14 +43,14 @@ func NewHub() *Hub {
 		for {
 			message := <-h.broadcast
 			seelog.Infof("Receive message at: %v, content: %v", time.Now().UnixNano(), message)
-			h.connectionsMx.RLock()
+			h.RLock()
 
 			if _, ok := h.connections[message.Room]; !ok {
-				h.connectionsMx.RUnlock()
+				h.RUnlock()
 				break
 			}
 			if message.UserId == "" {
-				h.connectionsMx.RUnlock()
+				h.RUnlock()
 				continue
 			}
 			outgoingMessageObj := h.buildOutgoingMessage(message)
@@ -61,28 +58,28 @@ func NewHub() *Hub {
 			var wg sync.WaitGroup
 			switch message.Cmd {
 			case constants.MESSAGE_CMD_MESSAGE:
-				for c := range h.connections[message.Room] {
+				for uc := range h.connections[message.Room] {
 					// To prevent previous messages cannot arrive client before current message should use WaitGroup here
 					wg.Add(1)
-					go func(c *UserConnection) {
+					go func(uc *UserConnection) {
 						defer wg.Done()
 						select {
-						case c.Connection.Send <- []byte(outgoingMessageJson):
-							seelog.Infof("Message for %p at %v", c, time.Now().UnixNano())
+						case uc.Connection.Send <- []byte(outgoingMessageJson):
+							seelog.Infof("Message for %p at %v", uc, time.Now().UnixNano())
 						// stop trying to send to this connection after trying for 1 second.
 						// if we have to stop, it means that a reader died so remove the connection also.
 						case <-time.After(1 * time.Second):
-							seelog.Infof("Shutting down connection %s", c)
+							seelog.Infof("Shutting down connection %s", uc)
 							// Send signal to c.Send or any channel => connection
-							go h.RemoveConnection(c)
+							go h.RemoveConnection(uc)
 						}
-					}(c)
+					}(uc)
 
 				}
 				// Handler other cases here...
 			}
-			wg.Wait()
-			h.connectionsMx.RUnlock()
+			wg.Wait() //Wait until we sent message to all users in current room
+			h.RUnlock()
 		}
 	}()
 	return h
@@ -103,8 +100,8 @@ func (h *Hub) buildOutgoingMessage(message *IncommingMessage) *OutgoingMessage {
 }
 
 func (h *Hub) AddConnection(conn *Connection, session *sessions.Session) *UserConnection {
-	h.connectionsMx.Lock()
-	defer h.connectionsMx.Unlock()
+	h.Lock()
+	defer h.Unlock()
 
 	userId := session.Values["gplusID"].(string)
 	name := session.Values["name"].(string)
@@ -141,8 +138,8 @@ func (h *Hub) AddConnection(conn *Connection, session *sessions.Session) *UserCo
 }
 
 func (h *Hub) RemoveConnection(uc *UserConnection) {
-	h.connectionsMx.Lock()
-	defer h.connectionsMx.Unlock()
+	h.Lock()
+	defer h.Unlock()
 
 	userId := uc.UserId
 	conn := uc.GetConnection()
@@ -164,4 +161,25 @@ func (h *Hub) RemoveConnection(uc *UserConnection) {
 			delete(h.users, userId)
 		}
 	}
+}
+
+func (h *Hub) CloseAllConnections() {
+	seelog.Info("Close all connections now!")
+	for userId := range h.users {
+		for c := range h.users[userId].Connections {
+			c.Lock()
+			c.Unregister <- struct{}{}
+			c.SendUnregisterMessage = true
+			c.Unlock()
+		}
+		seelog.Infof("User: %v", userId)
+	}
+	// for _, room := range supportedRooms {
+	// 	for uc := range h.connections[room] {
+	// 		connection := uc.GetConnection()
+	// 		seelog.Infof("Close for connection: %p for room: %s", connection, room)
+	// 		connection.Unregister <- struct{}{}
+	// 		// close(conn.Send)
+	// 	}
+	// }
 }

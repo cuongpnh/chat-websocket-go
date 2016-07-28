@@ -1,6 +1,6 @@
 <seelog type="sync" minlevel="trace">
   <outputs formatid="main">
-    <rollingfile type="size" filename="/var/log/tracker/app.log" maxsize="5000000" maxrolls="5" />
+    <rollingfile type="size" filename="./app.log" maxsize="5000000" maxrolls="5" />
     <console />
   </outputs>
   <formats>

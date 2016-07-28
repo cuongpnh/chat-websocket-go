@@ -1,5 +1,5 @@
 {
-	"ImportPath": "go-in-5-minutes/episode4",
+	"ImportPath": "tracker",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v74",
 	"Deps": [

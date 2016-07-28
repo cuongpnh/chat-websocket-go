@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"tracker/env"
 )
 
 func Base64Decode(s string) ([]byte, error) {
@@ -27,11 +28,14 @@ func RandomString(length int) (str string) {
 
 func GetGooleOauthConfig() *oauth2.Config {
 	return &oauth2.Config{
-		RedirectURL:  "http://localhost:8080/callback",
-		ClientID:     "491978716561-8jlo7n7mkpmdfi6mdrqe62a39b1gs9st.apps.googleusercontent.com", //os.Getenv("GOOGLE_KEY"),
-		ClientSecret: "Nx2Qt89DjVqjZZc-IMnP2wPk",                                                 //os.Getenv("GOOGLE_SECRET"),
+		RedirectURL:  GetGoogleRedirectURL(),
+		ClientID:     env.Get("GOOGLE_KEY"),
+		ClientSecret: env.Get("GOOGLE_SECRET"),
 		Scopes: []string{"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/userinfo.email"},
 		Endpoint: google.Endpoint,
 	}
+}
+func GetGoogleRedirectURL() string {
+	return env.Get("PROTOCOL") + "://" + env.Get("HOST") + ":" + env.Get("APP_PORT") + "/callback"
 }

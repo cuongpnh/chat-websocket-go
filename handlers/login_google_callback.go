@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"github.com/cihub/seelog"
-	"go-in-5-minutes/episode4/utils"
 	"golang.org/x/oauth2"
 	"log"
 	"net/http"
+	"tracker/utils"
 )
 
 type LoginGoogleCallbackHandler struct {

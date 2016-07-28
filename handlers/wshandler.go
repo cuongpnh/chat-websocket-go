@@ -4,10 +4,10 @@ import (
 	_ "encoding/json"
 	"github.com/cihub/seelog"
 	"github.com/gorilla/websocket"
-	"go-in-5-minutes/episode4/models"
 	_ "io/ioutil"
 	"net/http"
 	"sync"
+	"tracker/models"
 )
 
 var (
@@ -39,25 +39,40 @@ func (this *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &models.Connection{
-		Send:         make(chan []byte, 256),
-		Hub:          this.Hub,
-		CreationTime: GetCreationTime(r),
+		Send:            make(chan []byte, 256),
+		Hub:             this.Hub,
+		CreationTime:    GetCreationTime(r),
+		Unregister:      make(chan struct{}),
+		CloseConnection: make(chan struct{}),
 	}
 
 	uc := c.Hub.AddConnection(c, session)
 
-	defer func(uc *models.UserConnection) {
-		err = wsConn.Close()
-		if err != nil {
-			seelog.Infof("Cannot close socket %s", err)
+	// defer func(uc *models.UserConnection) {
+	// 	err = wsConn.Close()
+	// 	if err != nil {
+	// 		seelog.Infof("Cannot close socket %s", err)
+	// 	}
+	// 	seelog.Infof("Close connection now for %p", c)
+	// 	c.Hub.RemoveConnection(uc)
+	// }(uc)
+
+	go func(uc *models.UserConnection) {
+		seelog.Info("Wait for unregister signal")
+		<-c.Unregister
+		ws_err := wsConn.Close()
+		if ws_err != nil {
+			seelog.Infof("Cannot close socket %s", ws_err)
 		}
 		seelog.Infof("Close connection now for %p", c)
 		c.Hub.RemoveConnection(uc)
+		c.CloseConnection <- struct{}{}
 	}(uc)
 
 	var wg sync.WaitGroup
-	wg.Add(1) //Close reader that mean we should close Writer, don't need to Add(2) here
+	// wg.Add(1) //Close reader that mean we should close Writer, don't need to Add(2) here
 	go c.Reader(&wg, wsConn, storedGPlusID.(string))
 	go c.Writer(&wg, wsConn)
-	wg.Wait()
+	// wg.Wait()
+	<-c.CloseConnection
 }

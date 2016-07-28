@@ -9,18 +9,28 @@ import (
 )
 
 type Connection struct {
+	sync.RWMutex
 	// Buffered channel of outbound messages.
-	Send         chan []byte
-	Hub          *Hub
-	CreationTime int
+	Send                  chan []byte
+	Hub                   *Hub
+	CreationTime          int
+	Unregister            chan struct{}
+	CloseConnection       chan struct{}
+	SendUnregisterMessage bool
 }
 
 func (c *Connection) Reader(wg *sync.WaitGroup, wsConn *websocket.Conn, userId string) {
-	defer wg.Done()
+	// wg.Done()
 	for {
 		_, message, err := wsConn.ReadMessage()
 		if err != nil {
 			seelog.Infof("Cannot read message from %p, error: %s\n", c, err)
+			if c.SendUnregisterMessage == false {
+				c.Lock()
+				c.Unregister <- struct{}{}
+				c.SendUnregisterMessage = true
+				c.Unlock()
+			}
 			break
 		}
 
@@ -35,6 +45,7 @@ func (c *Connection) Reader(wg *sync.WaitGroup, wsConn *websocket.Conn, userId s
 		seelog.Infof("Read Message: %v, content: %v", time.Now().UnixNano(), data)
 		c.Hub.broadcast <- data
 	}
+	seelog.Infof("Close read channel for %p", c)
 }
 
 func (c *Connection) Writer(wg *sync.WaitGroup, wsConn *websocket.Conn) {
@@ -46,4 +57,5 @@ func (c *Connection) Writer(wg *sync.WaitGroup, wsConn *websocket.Conn) {
 			break
 		}
 	}
+	seelog.Infof("Close write channel for %p", c)
 }

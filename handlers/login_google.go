@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"go-in-5-minutes/episode4/utils"
 	"net/http"
+	"tracker/utils"
 )
 
 type LoginGoogleHandler struct {

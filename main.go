@@ -1,16 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"github.com/cihub/seelog"
-	"go-in-5-minutes/episode4/handlers"
-	"go-in-5-minutes/episode4/models"
+	"github.com/fvbock/endless"
 	"net/http"
+	"syscall"
+	"tracker/env"
+	"tracker/handlers"
+	"tracker/models"
 )
 
 func main() {
 
 	defer seelog.Flush()
-	logConfig := "log_config.xml" // logConfig := os.Getenv("LOG_CONFIG"),
+	logConfig := env.Get("LOG_CONFIG")
 	logger, err := seelog.LoggerFromConfigAsFile(logConfig)
 	if err != nil {
 		panic(err)
@@ -26,8 +30,17 @@ func main() {
 	router.HandleFunc("/callback", handlers.NewHandler(&handlers.LoginGoogleCallbackHandler{}))
 	router.HandleFunc("/reconnect", handlers.NewHandler(&handlers.ReconnectHandler{}))
 	router.HandleFunc("/ws", handlers.NewHandler(&handlers.WebSocketHandler{Hub: h}))
-	seelog.Info("Serving on port 8080")
-	seelog.Error(http.ListenAndServe(":8080", router))
+
+	url := fmt.Sprintf(":%s", env.Get("APP_PORT"))
+	seelog.Info("Serving on port " + url)
+
+	endlessServer := endless.NewServer(url, router)
+	endlessServer.SignalHooks[endless.PRE_SIGNAL][syscall.SIGINT] = append(
+		endlessServer.SignalHooks[endless.PRE_SIGNAL][syscall.SIGINT],
+		h.CloseAllConnections)
+
+	seelog.Error(endlessServer.ListenAndServe())
+	// seelog.Error(endless.ListenAndServe(url, router))
 }
 
 // Flow

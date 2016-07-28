@@ -1,0 +1,10 @@
+tracker:
+  container_name: tracker
+  build: .
+  ports:
+    - "8080:8080"
+  volumes:
+    - ".:/go/src/tracker"
+    - "./logs:/var/log/"
+  env_file:
+    - ".env"

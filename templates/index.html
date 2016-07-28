@@ -11,139 +11,123 @@
 
     <script type="text/javascript">
 
+      var ACCESS_TOKEN = '{{.Value}}'
+      var MESSAGE_CMD_MESSAGE = 1;
+      var MESSAGE_CMD_LEAVE   = 2;
+      var MESSAGE_CMD_CLOSE   = 3;
+      var creationTime;
+      var conn;
 
-    var ACCESS_TOKEN = '{{.Value}}'
-    var MESSAGE_CMD_MESSAGE = 1;
-    var MESSAGE_CMD_LEAVE   = 2;
-    var MESSAGE_CMD_CLOSE   = 3;
-    var creationTime;
-    var conn;
-
-    function performanceTest(n){
-      for(i = 0; i < n; i++) {
-        message = JSON.stringify({room: "default", message: "message: " + i, cmd: 1, timestamp: $.now()});
-        conn.send(message);
-      }
-    }
-
-    $(function() {
-
-      var hostname = window.location.hostname;
-      var url = "ws://" + hostname + ":8080/ws";
-
-      var msg = $("#msg");
-      var room = getURLParameter('room') != null ? getURLParameter('room') : 'default';
-
-      // var user_id = getURLParameter('user_id') != null ? parseInt(getURLParameter('user_id')) : 1;
-
-      function init(){
-        $("#menu-toggle").click(function(e) {
-          e.preventDefault();
-          $("#wrapper").toggleClass("toggled");
-        });
-
-        $('#form .row:first').css({width: $(document).width() - $('#sidebar-wrapper').width() + 5 + 'px'});
-
-        // $(window).resize(function() {
-        //   $('#form .row:first').css({width: $(document).width() - $('#sidebar-wrapper').width() + 5 + 'px'});
-        // }
-
-        $('#room-list li').not(':first').bind('click', function() {
-          setActiveRoom($(this).attr('id').split('-')[1]);
-        });
-        // $('#room-list li#room-' + room).addClass('active')
-        $(document).on('scrollToBottom', function(){
-          $('html, body')[0].scrollTop = $(document).height();
-        });
-      }
-
-
-      function appendLog(data) {
-        var roomEle = $('#room-log-' + data.room);
-        // var doScroll = roomEle.scrollTop == roomEle.scrollHeight - roomEle.clientHeight;
-        $('<div class="media"><div class="media-left"><a href="#" title="' + data.name + '"><img src="' + data.picture +'"/></a></div><div class="media-body">' + data.message + '</div></div>').appendTo(roomEle);
-        // if (doScroll) {
-        //   roomEle.scrollTop = roomEle.scrollHeight - roomEle.clientHeight;
-        // }
-        // $('html, body').stop(true, true).animate({scrollTop:$(document).height()}, 0);
-      }
-
-      function getURLParameter(name) {
-        return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [null, ''])[1].replace(/\+/g, '%20')) || null;
-      }
-
-      function setActiveRoom(newRoom) {
-
-        $('.room-log-wrapper .room').removeClass('active');
-        $('.room-log-wrapper #room-log-'+ newRoom).addClass('active');
-        $('#room-list li').removeClass('active');
-        $('#room-list li#room-' + newRoom).addClass('active');
-        room = newRoom;
-        // $(document).trigger('scrollToBottom');
-        // $('html, body')[0].scrollTop = $(document).height();
-        $('html, body').stop(true, true).animate({scrollTop:$(document).height()}, '100');
-      }
-
-      $("#form").submit(function() {
-        if (!conn) {
-          return false;
+      function sendBulkMessages(n) {
+        for(i = 0; i < n; i++) {
+          message = JSON.stringify({room: "default", message: "message: " + i, cmd: 1, timestamp: $.now()});
+          conn.send(message);
         }
-        if (!msg.val()) {
-          return false;
-        }
-        message = buildMessage(msg.val(), MESSAGE_CMD_MESSAGE);
-        conn.send(message);
-        msg.val("");
-        return false;
-      });
-
-      function onMessage(event) {
-        data = JSON.parse(event.data);
-          console.log(data);
-          appendLog(data);
-          setActiveRoom(data.room);
       }
-      function reconnect() {
-        setTimeout(function() {
-          $.get('/reconnect', {access_token: ACCESS_TOKEN}, function(data){
+
+      $(function() {
+
+        var hostname = window.location.hostname;
+        var url = "ws://" + hostname + ":8080/ws";
+        var msg = $("#msg");
+        var room = getURLParameter('room') != null ? getURLParameter('room') : 'default';
+
+        function init(){
+          $("#menu-toggle").click(function(e) {
+            e.preventDefault();
+            $("#wrapper").toggleClass("toggled");
+          });
+
+          $('#form .row:first').css({width: $(document).width() - $('#sidebar-wrapper').width() + 5 + 'px'});
+
+          $('#room-list li').not(':first').bind('click', function() {
+            setActiveRoom($(this).attr('id').split('-')[1]);
+          });
+          $('#room-list li#room-' + room).addClass('active')
+          $(document).on('scrollToBottom', function(){
+            $('html, body')[0].scrollTop = $(document).height();
+          });
+        }
+
+
+        function appendLog(data) {
+          var roomEle = $('#room-log-' + data.room);
+          $('<div class="media"><div class="media-left"><a href="#" title="' + data.name + '"><img src="' + data.picture +'"/></a></div><div class="media-body">' + data.message + '</div></div>').appendTo(roomEle);
+        }
+
+        function getURLParameter(name) {
+          return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [null, ''])[1].replace(/\+/g, '%20')) || null;
+        }
+
+        function setActiveRoom(newRoom) {
+          $('.room-log-wrapper .room').removeClass('active');
+          $('.room-log-wrapper #room-log-'+ newRoom).addClass('active');
+          $('#room-list li').removeClass('active');
+          $('#room-list li#room-' + newRoom).addClass('active');
+          $('html, body').stop(true, true).animate({scrollTop:$(document).height()}, '100');
+          room = newRoom;
+        }
+
+        $("#form").submit(function() {
+          if (!conn) {
+            return false;
+          }
+          if (!msg.val()) {
+            return false;
+          }
+          message = buildMessage(msg.val(), MESSAGE_CMD_MESSAGE);
+          conn.send(message);
+          msg.val("");
+          return false;
+        });
+
+        function onMessage(event) {
+          data = JSON.parse(event.data);
             console.log(data);
-            if (data['success']) {
-              connectWs();
-            } else {
+            appendLog(data);
+            setActiveRoom(data.room);
+        }
+        function reconnect() {
+          setTimeout(function() {
+            $.get('/reconnect', {access_token: ACCESS_TOKEN}, function(data){
+              console.log(data);
+              if (data['success']) {
+                connectWs();
+              } else {
+                reconnect();
+              }
+            }).fail(function() {
+              console.log('Fail to connect to server');
+              reconnect();
+            });
+          }, 5000);
+        }
+
+        function connectWs() {
+          creationTime = $.now();
+          if (window["WebSocket"]) {
+            conn = new WebSocket(url + "?creation_time=" + creationTime + "&access_token=" + ACCESS_TOKEN);
+
+            conn.onclose = function(event){
               reconnect();
             }
-          }).fail(function() {
-            console.log('Fail to connect to server');
-            reconnect();
-          });
-        }, 5000);
-      }
 
-      function connectWs() {
-        creationTime = $.now();
-        if (window["WebSocket"]) {
-          conn = new WebSocket(url + "?creation_time=" + creationTime + "&access_token=" + ACCESS_TOKEN);
-
-          conn.onclose = function(event){
-            reconnect();
+            conn.onmessage = function(event) {
+              onMessage(event);
+            }
+          } else {
+            alert("Your browser does not support WebSockets.");
           }
-
-          conn.onmessage = function(event) {
-            onMessage(event);
-          }
-        } else {
-          alert("Your browser does not support WebSockets.");
         }
-      }
 
-      function buildMessage(message, cmd) {
-        return JSON.stringify({room: room, message: message, cmd: cmd, timestamp: $.now()});
-      }
+        function buildMessage(message, cmd) {
+          return JSON.stringify({room: room, message: message, cmd: cmd, timestamp: $.now()});
+        }
 
-      init();
-      connectWs();
+        init();
+        connectWs();
 
-    });
+      });
     </script>
     <style type="text/css">
     #wrapper {
@@ -320,10 +304,10 @@
                   <a href="#">Default</a>
               </li>
               <li id="room-18plus">
-                  <a href="#">Chat Siếc</a>
+                  <a href="#">Science</a>
               </li>
               <li id="room-hentai">
-                  <a href="#">Chat hen-cái-mà-tai</a>
+                  <a href="#">Games</a>
               </li>
           </ul>
       </div>
