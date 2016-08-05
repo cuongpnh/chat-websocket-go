@@ -19,8 +19,7 @@ type Connection struct {
 	SendUnregisterMessage bool
 }
 
-func (c *Connection) Reader(wg *sync.WaitGroup, wsConn *websocket.Conn, userId string) {
-	// wg.Done()
+func (c *Connection) Reader(wsConn *websocket.Conn, userId string) {
 	for {
 		_, message, err := wsConn.ReadMessage()
 		if err != nil {
@@ -48,7 +47,7 @@ func (c *Connection) Reader(wg *sync.WaitGroup, wsConn *websocket.Conn, userId s
 	seelog.Infof("Close read channel for %p", c)
 }
 
-func (c *Connection) Writer(wg *sync.WaitGroup, wsConn *websocket.Conn) {
+func (c *Connection) Writer(wsConn *websocket.Conn) {
 	for message := range c.Send {
 		seelog.Infof("Write Message for %p, at : %v, content: %v", c, time.Now().UnixNano(), string(message))
 		err := wsConn.WriteMessage(websocket.TextMessage, message)
