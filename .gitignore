@@ -1,4 +1,5 @@
 *.log
 .env
+.env-local
 gin-bin
 server
