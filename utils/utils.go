@@ -37,5 +37,9 @@ func GetGooleOauthConfig() *oauth2.Config {
 	}
 }
 func GetGoogleRedirectURL() string {
-	return env.Get("PROTOCOL") + "://" + env.Get("HOST") + ":" + env.Get("APP_PORT") + "/callback"
+	port := ""
+	if env.Get("PORT") != "80" {
+		port = ":" + env.Get("PORT")
+	}
+	return env.Get("PROTOCOL") + "://" + env.Get("HOST") + port + "/callback"
 }

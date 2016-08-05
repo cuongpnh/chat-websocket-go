@@ -1,5 +1,6 @@
 *.log
 .env
+.env-local
 vendor/
 gin-bin
 server

@@ -31,7 +31,7 @@ func main() {
 	router.HandleFunc("/reconnect", handlers.NewHandler(&handlers.ReconnectHandler{}))
 	router.HandleFunc("/ws", handlers.NewHandler(&handlers.WebSocketHandler{Hub: h}))
 
-	url := fmt.Sprintf(":%s", env.Get("APP_PORT"))
+	url := fmt.Sprintf(":%s", env.Get("PORT"))
 	seelog.Info("Serving on port " + url)
 
 	endlessServer := endless.NewServer(url, router)
