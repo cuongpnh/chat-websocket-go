@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"github.com/cuongpnh/chat-websocket-go/utils"
 	"net/http"
-	"tracker/utils"
 )
 
 type LoginGoogleHandler struct {

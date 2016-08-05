@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/cihub/seelog"
+	"github.com/cuongpnh/chat-websocket-go/env"
+	"github.com/cuongpnh/chat-websocket-go/handlers"
+	"github.com/cuongpnh/chat-websocket-go/models"
 	"github.com/fvbock/endless"
 	"net/http"
 	"syscall"
-	"tracker/env"
-	"tracker/handlers"
-	"tracker/models"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 	router.HandleFunc("/reconnect", handlers.NewHandler(&handlers.ReconnectHandler{}))
 	router.HandleFunc("/ws", handlers.NewHandler(&handlers.WebSocketHandler{Hub: h}))
 
-	url := fmt.Sprintf(":%s", env.Get("APP_PORT"))
+	url := fmt.Sprintf(":%s", env.Get("PORT"))
 	seelog.Info("Serving on port " + url)
 
 	endlessServer := endless.NewServer(url, router)
@@ -40,7 +40,6 @@ func main() {
 		h.CloseAllConnections)
 
 	seelog.Error(endlessServer.ListenAndServe())
-	// seelog.Error(endless.ListenAndServe(url, router))
 }
 
 // Flow

@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"github.com/cihub/seelog"
+	"github.com/cuongpnh/chat-websocket-go/models"
 	"net/http"
 	"text/template"
-	"tracker/models"
 )
 
 type HomeHandler struct {

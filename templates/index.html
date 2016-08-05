@@ -3,7 +3,7 @@
 <html>
 <head>
     <title>Chat Example</title>
-    <script src="http://code.jquery.com/jquery-2.0.0.js" type= "text/javascript">
+    <script src="//code.jquery.com/jquery-2.0.0.js" type= "text/javascript">
     </script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
@@ -28,7 +28,7 @@
       $(function() {
 
         var hostname = window.location.hostname;
-        var url = "ws://" + hostname + ":8080/ws";
+        var url = location.protocol.replace("http","ws") + "//" + hostname + "/ws";
         var msg = $("#msg");
         var room = getURLParameter('room') != null ? getURLParameter('room') : 'default';
 

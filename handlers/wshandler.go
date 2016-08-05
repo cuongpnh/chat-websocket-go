@@ -3,11 +3,11 @@ package handlers
 import (
 	_ "encoding/json"
 	"github.com/cihub/seelog"
+	"github.com/cuongpnh/chat-websocket-go/models"
 	"github.com/gorilla/websocket"
 	_ "io/ioutil"
 	"net/http"
 	"sync"
-	"tracker/models"
 )
 
 var (

@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"github.com/cihub/seelog"
+	"github.com/cuongpnh/chat-websocket-go/utils"
 	"golang.org/x/oauth2"
 	"log"
 	"net/http"
-	"tracker/utils"
 )
 
 type LoginGoogleCallbackHandler struct {

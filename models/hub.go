@@ -3,11 +3,11 @@ package models
 import (
 	"encoding/json"
 	"github.com/cihub/seelog"
+	"github.com/cuongpnh/chat-websocket-go/constants"
 	"github.com/gorilla/sessions"
 	"strconv"
 	"sync"
 	"time"
-	"tracker/constants"
 )
 
 var (

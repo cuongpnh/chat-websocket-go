@@ -3,9 +3,9 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"github.com/cuongpnh/chat-websocket-go/env"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"tracker/env"
 )
 
 func Base64Decode(s string) ([]byte, error) {
@@ -37,5 +37,5 @@ func GetGooleOauthConfig() *oauth2.Config {
 	}
 }
 func GetGoogleRedirectURL() string {
-	return env.Get("PROTOCOL") + "://" + env.Get("HOST") + ":" + env.Get("APP_PORT") + "/callback"
+	return env.Get("PROTOCOL") + "://" + env.Get("HOST") + "/callback"
 }

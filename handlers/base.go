@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/cihub/seelog"
+	"github.com/cuongpnh/chat-websocket-go/models"
+	"github.com/cuongpnh/chat-websocket-go/utils"
 	"github.com/gorilla/sessions"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"tracker/models"
-	"tracker/utils"
 )
 
 var (
