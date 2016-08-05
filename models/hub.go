@@ -15,8 +15,6 @@ var (
 )
 
 type Hub struct {
-	// the mutex to protect connections
-	// connectionsMx sync.RWMutex
 	sync.RWMutex
 
 	// Registered connections.
@@ -32,7 +30,6 @@ type Hub struct {
 
 func NewHub() *Hub {
 	h := &Hub{
-		// connectionsMx:   sync.RWMutex{},
 		connections:     make(map[string]map[*UserConnection]struct{}),
 		userConnections: make(map[string]*UserConnection),
 		users:           make(map[string]*User),
@@ -174,12 +171,4 @@ func (h *Hub) CloseAllConnections() {
 		}
 		seelog.Infof("User: %v", userId)
 	}
-	// for _, room := range supportedRooms {
-	// 	for uc := range h.connections[room] {
-	// 		connection := uc.GetConnection()
-	// 		seelog.Infof("Close for connection: %p for room: %s", connection, room)
-	// 		connection.Unregister <- struct{}{}
-	// 		// close(conn.Send)
-	// 	}
-	// }
 }

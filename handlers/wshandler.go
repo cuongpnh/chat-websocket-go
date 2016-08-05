@@ -1,13 +1,10 @@
 package handlers
 
 import (
-	_ "encoding/json"
 	"github.com/cihub/seelog"
 	"github.com/cuongpnh/chat-websocket-go/models"
 	"github.com/gorilla/websocket"
-	_ "io/ioutil"
 	"net/http"
-	"sync"
 )
 
 var (
@@ -48,15 +45,6 @@ func (this *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	uc := c.Hub.AddConnection(c, session)
 
-	// defer func(uc *models.UserConnection) {
-	// 	err = wsConn.Close()
-	// 	if err != nil {
-	// 		seelog.Infof("Cannot close socket %s", err)
-	// 	}
-	// 	seelog.Infof("Close connection now for %p", c)
-	// 	c.Hub.RemoveConnection(uc)
-	// }(uc)
-
 	go func(uc *models.UserConnection) {
 		seelog.Info("Wait for unregister signal")
 		<-c.Unregister
@@ -69,10 +57,8 @@ func (this *WebSocketHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		c.CloseConnection <- struct{}{}
 	}(uc)
 
-	var wg sync.WaitGroup
-	// wg.Add(1) //Close reader that mean we should close Writer, don't need to Add(2) here
-	go c.Reader(&wg, wsConn, storedGPlusID.(string))
-	go c.Writer(&wg, wsConn)
-	// wg.Wait()
+	go c.Reader(wsConn, storedGPlusID.(string))
+	go c.Writer(wsConn)
+
 	<-c.CloseConnection
 }
